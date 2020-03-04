@@ -20,6 +20,7 @@ struct FlickrSearchView: View {
 
     enum Layout {
         static var searchBarHeight: CGFloat = 50
+        static var recentKeywordsListHeight: CGFloat = 300
     }
 
     var body: some View {
@@ -70,16 +71,14 @@ extension FlickrSearchView {
                                         Text("Load More Results")
                                             .frame(height: 50)
                                             .frame(minWidth: 0, maxWidth: .infinity, alignment: .center)
-                                    }
-            }),
+                                    }}),
                     content: {
                         ForEach(self.state.flickrImages, id: \.id) { flickrImage in
                             FlickrImageDetailView(flickrImage: flickrImage)
                                 .onTapGesture {
                                     self.viewModel.notify(event: .flickrImageSelected(flickrImage))
                             }
-                        }
-            })
+                        }})
         }
         .opacity(self.state.flickrImages.isEmpty ? 0 : 1)
 
@@ -97,7 +96,7 @@ extension FlickrSearchView {
             .background(Color(UIColor.systemBackground))
             .onTapGesture { self.recentKeywordSelected(value) }
         }
-        .frame(minHeight: 0, maxHeight: state.showRecentKeywords ? 300 : 0)
+        .frame(minHeight: 0, maxHeight: state.showRecentKeywords ? Layout.recentKeywordsListHeight : 0)
         .cornerRadius(10)
         .padding(.leading, 20)
         .padding(.trailing, 20)

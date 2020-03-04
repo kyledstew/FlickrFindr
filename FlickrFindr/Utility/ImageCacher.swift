@@ -11,6 +11,9 @@ import SwiftUI
 let imageCache = NSCache<AnyObject, AnyObject>()
 
 class ImageCacher: ObservableObject {
+    enum Error: Swift.Error {
+        case unknownError
+    }
 
     @Published var isLoading: Bool = false
     @Published var image: Image?
@@ -26,12 +29,18 @@ class ImageCacher: ObservableObject {
     func loadImage(url: URL) {
         if let image = loadImageFromCache(url: url) {
             self.isLoading = false
-            self.image = image
+            self.setImage(image: image)
         } else {
             self.isLoading = true
-            downloadImage(url: url) {
-                DispatchQueue.main.async {
-                    self.loadImage(url: url)
+            downloadImage(url: url) { result in
+                switch result {
+                case let .success(image):
+                    self.addImageToCache(image: image, url: url)
+                    self.setImage(image: Image(uiImage: image))
+
+                case let .failure(error):
+                    print("Error loading image: \(error)")
+                    self.setImage(image: Image(systemName: "photo"))
                 }
             }
         }
@@ -39,6 +48,13 @@ class ImageCacher: ObservableObject {
 
     func cancel() {
         task?.cancel()
+    }
+
+    private func setImage(image: Image) {
+        DispatchQueue.main.async {
+            self.isLoading = false
+            self.image = image
+        }
     }
 
     /// Returns image with given url from cache
@@ -56,12 +72,13 @@ class ImageCacher: ObservableObject {
     }
 
     /// Download and caches image at given URL
-    private func downloadImage(url: URL, completion: @escaping () -> Void) {
+    private func downloadImage(url: URL, completion: @escaping (Result<UIImage, Swift.Error>) -> Void) {
         DispatchQueue.global(qos: .userInitiated).async {
             self.task = URLSession.shared.dataTask(with: url, completionHandler: { (data, response, error) in
                 if let data = data, let image = UIImage(data: data) {
-                    self.addImageToCache(image: image, url: url)
-                    completion()
+                    completion(.success(image))
+                } else {
+                    completion(.failure(error ?? Error.unknownError))
                 }
             })
 
